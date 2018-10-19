@@ -30,7 +30,8 @@ class Reservation {
   }
 
   get formattedStartAt() {
-    return moment(this.startAt).format('MMMM Do YYYY, h:mm a');
+    return moment(this.startAt).calendar()
+    // return moment(this.startAt).format('MMMM Do YYYY, h:mm a');
   }
 
   /** methods for setting/getting notes (keep as a blank string, not NULL) */
@@ -181,8 +182,6 @@ class Customer {
 
   /** get customers filtered by name */
   static async some(name) {
-    const capitalized = name[0].toUpperCase().concat(name.slice(1));
-    console.log(capitalized)
     const results = await db.query(
       `SELECT id, 
          first_name AS "firstName",  
@@ -190,11 +189,10 @@ class Customer {
          phone, 
          notes
        FROM customers
-       WHERE first_name LIKE $1 OR last_name LIKE $1 OR
-       first_name LIKE $2 OR last_name LIKE $2 OR
-       first_name LIKE $3 OR last_name LIKE $3
+       WHERE metaphone(first_name, 10)=metaphone($1, 10) 
+       OR metaphone(last_name, 10)=metaphone($1, 10)
        ORDER BY last_name, first_name`,
-       [`%${name}%`, `%${name.toLowerCase()}%`, `%${capitalized}%`]
+       [`%${name}%`]
     );
     console.log(results);
     return results.rows.map(c => new Customer(c))
