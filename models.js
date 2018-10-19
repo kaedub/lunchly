@@ -55,6 +55,17 @@ class Reservation {
     return this._customerId;
   }
 
+  /** methods for setting/getting number of guests */
+
+  set numGuests(val) {
+    if (val < 1) throw new Error('Reservations must have at least 1 guest.');
+    this._numGuests = val;
+  }
+
+  get numGuests() {
+    return this._numGuests;
+  }
+
   /** given a customer id, find their reservations. */
 
   static async getReservationsForCustomer(customerId) {
@@ -86,10 +97,35 @@ class Reservation {
         [id]
     );
 
-    return new Reservation(results.row[0]);
+    return new Reservation(result.row[0]);
   }
-}
 
+  /** save this reservation */
+
+  async save() {
+    if (this.id === undefined) {
+      // insert
+      const result = await db.query(
+        `INSERT INTO reservations (customer_id, num_guests, start_at, notes)
+        VALUES ($1, $2, $3, $4) RETURNING id`, 
+        [this.customerId, this.numGuests, this.startAt, this.notes]
+      );
+      this.id = result.rows[0].id;
+      console.log('Inserted', this.id);
+    } else {
+      // update
+      const result = await db.query(
+        `UPDATE reservations SET 
+        customer_id=$1, num_guests=$2, start_at=$3, notes=$4
+        WHERE id=$5`, 
+        [this.customerId, this.numGuests, this.startAt, this.notes, this.id]
+      );
+      this.id = result.rows[0].id;
+      console.log('Updated', this.id);
+    }
+  }
+
+}
 
 /** Customer of the restaurant. */
 
@@ -120,6 +156,12 @@ class Customer {
 
   get phone() {
     return this._phone;
+  }
+
+  /** methods for getting full name */
+
+  get fullname() {
+    return `${this.firstName} ${this.lastName}`;
   }
 
   /** find all customers. */

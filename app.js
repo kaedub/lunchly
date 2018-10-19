@@ -7,6 +7,7 @@ const routes = require("./routes");
 
 const app = express();
 
+// bodyparser.urlencoded vs express.urlencoded?
 app.use(bodyParser.urlencoded({extended: false}));
 
 nunjucks.configure('templates', {
