@@ -6,7 +6,7 @@ const moment = require("moment");
 const db = new pg.Client("postgresql://localhost/lunchly");
 db.connect();
 
-
+const BEST_CUSTOMER_LIMIT = 10;
 /** A reservation for a party */
 
 class Reservation {
@@ -179,6 +179,27 @@ class Customer {
     return results.rows.map(c => new Customer(c));
   }
 
+  /** get customers filtered by name */
+  static async some(name) {
+    const capitalized = name[0].toUpperCase().concat(name.slice(1));
+    console.log(capitalized)
+    const results = await db.query(
+      `SELECT id, 
+         first_name AS "firstName",  
+         last_name AS "lastName", 
+         phone, 
+         notes
+       FROM customers
+       WHERE first_name LIKE $1 OR last_name LIKE $1 OR
+       first_name LIKE $2 OR last_name LIKE $2 OR
+       first_name LIKE $3 OR last_name LIKE $3
+       ORDER BY last_name, first_name`,
+       [`%${name}%`, `%${name.toLowerCase()}%`, `%${capitalized}%`]
+    );
+    console.log(results);
+    return results.rows.map(c => new Customer(c))
+  }
+
   /** get a customer by ID. */
 
   static async get(id) {
@@ -200,6 +221,21 @@ class Customer {
     return await Reservation.getReservationsForCustomer(this.id);
   }
 
+  /**Get top ten customer */
+  static async getBestCustomers() {
+    const results = await db.query(
+      `SELECT customer_id AS "id", first_name AS "firstName", 
+      last_name AS "lastName", phone, customers.notes 
+      FROM reservations 
+      JOIN customers ON customer_id=customers.id
+      GROUP BY customer_id, first_name, last_name, phone, customers.notes
+      ORDER BY COUNT(*) desc LIMIT $1`,
+      [BEST_CUSTOMER_LIMIT]
+    );
+    let customers = results.rows.map(row => new Customer(row));
+    return customers;
+  }
+
   /** save this customer. */
 
   async save() {
@@ -213,7 +249,7 @@ class Customer {
       this.id = result.rows[0].id;
     } else {
       await db.query(
-            `UPDATE customers SET first_name=$1, last_name=$2, phone=$3, notes=$4)
+            `UPDATE customers SET first_name=$1, last_name=$2, phone=$3, notes=$4
              WHERE id=$5`,
           [this.firstName, this.lastName, this.phone, this.notes, this.id]);
     }

@@ -9,10 +9,25 @@ let router = express.Router();
 /** Homepage: show list of customers. */
 
 router.get("/", async (req, res) => {
-  const customers = await Customer.all();
+  let search_query = req.query.search_query;
+  let customers;
+
+  if (search_query) {
+    customers = await Customer.some(search_query);
+  } else {
+    customers = await Customer.all();
+  }
+
   res.render("customer_list.html", { customers })
 });
 
+/**List of Best Customers */
+
+router.get('/best', async (req, res) => {
+  let customers = await Customer.getBestCustomers();
+  console.log(customers);
+  res.render("customer_list.html", { customers });
+})
 
 /** Form to add a new customer. */
 
@@ -74,7 +89,12 @@ router.post("/:customerId/edit/", async (req, res) => {
   const notes = req.body.notes;
 
   try {
-    const customer = new Customer({ firstName, lastName, phone, notes });
+    const customer = await Customer.get(req.params.customerId);
+    customer.firstName = firstName;
+    customer.lastName = lastName;
+    customer.phone = phone;
+    customer.notes = notes;
+
     await customer.save()
 
     return res.redirect(`/${customer.id}/`);
