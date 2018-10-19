@@ -3,7 +3,7 @@
 const express = require("express");
 const { Customer, Reservation } = require("./models");
 
-router = express.Router();
+let router = express.Router();
 
 
 /** Homepage: show list of customers. */
